@@ -1,126 +1,111 @@
-# Taller Unity: Escena Invernal de Rescate
+# Escena Invernal de Rescate (Unity)
 
-Plan de trabajo basado en `Taller Práctico de Unity - Escena Invernal.pdf`.
-Unity 6000.3.23f1 (URP). Tiempo estimado del taller: 2 a 3 horas.
+Taller de laboratorio del módulo **Composición de Escenas y Control de Transformaciones**.
 
-**Escena:** una patrulla de policía queda semienterrada en una tormenta de nieve. El motor sigue encendido y emite humo. Las sirenas giran. La nieve cae sobre toda la escena.
+Es una noche de tormenta de nieve. Una patrulla de policía quedó atascada y medio sepultada bajo un ventisquero. El motor sigue encendido y escupe humo a tirones, las luces de emergencia giran sin parar y la ventisca arrecia sobre todo el entorno.
 
-## Estado inicial
+![Vista principal: patrulla enterrada en la nieve con sirenas, ventisca y humo de escape](Docs/captura_principal.png)
 
-| Elemento | Estado |
-|---|---|
-| Proyecto Unity | `SegundoTaller_EscenaInvernal/` con URP, `SampleScene` y `.gitignore` de Unity (activo) |
-| Repo local | Tiene 1 commit ("Registro inicial") y cambios sin commitear |
-| Remoto actual | `github.com/brandonjimenez21/SegundoTaller_EscenaInvernal` |
-| Blender | `../SegundoTaller_EscenaInvernal.blend` (ver "Dependencias y bloqueos") |
-| Unity MCP | Sin conexión (el editor está cerrado) |
+![Vista frontal de la patrulla](Docs/captura_frontal.png)
 
-## Dependencias y bloqueos
+## Cómo abrir el proyecto
 
-1. **Unity cerrado.** Abrir el proyecto en Unity 6000.3.23f1 para que el MCP de Unity conecte. Sin eso no se puede crear la escena ni capturar pantallas.
-2. **Blender MCP.** En esta sesión no hay herramientas de Blender cargadas. Hay que abrir Blender con el addon de MCP activo y el servidor iniciado, o reconectar el MCP. Si no se logra, se usan primitivas de Unity (el PDF lo permite).
-3. **Nombre del repo.** El PDF exige un repo **público** llamado `Unity-Taller-Invierno-[Apellido]`. El remoto actual tiene otro nombre. Decisión pendiente: crear el repo nuevo y cambiar el `origin`, o renombrar el actual.
-4. **Cambios sin commitear.** Hay modificaciones de Unity (URP, ProjectSettings) y se borró `Assets/Editor/HubForceResolve.cs`. Revisarlas antes del commit 1 para no mezclarlas con otras features.
+1. Instala [Git LFS](https://git-lfs.com) y ejecútalo una vez con `git lfs install`. Los modelos `.fbx` y las texturas `.png` se guardan con LFS: sin él, se descargan como punteros de texto y la escena aparece vacía.
+2. Clona el repositorio.
+3. Ábrelo con **Unity 6000.3.23f1**. El proyecto usa Universal Render Pipeline (URP).
+4. Abre `Assets/Scenes/EscenaInvernal.unity` y pulsa **Play**: las sirenas giran, la nieve cae y el humo sale del escape.
 
-## Fases
+## Jerarquía de la escena (10 objetos)
 
-### Fase 0. Preparación (sin código)
-- [ ] Decidir el nombre del repo (ver bloqueo 3) y confirmar que es público.
-- [ ] Abrir el `.blend` y ver qué contiene (coche, escala, origen, materiales).
-- [ ] Abrir el proyecto en Unity y confirmar que el MCP conecta.
-- [ ] Revisar `git status` y decidir qué entra en el commit 1.
+| # | Objeto | Tipo / componente | Función y posición |
+|---|--------|-------------------|--------------------|
+| 1 | `Main Camera` | Camera (+ Volume de post-procesado, antialiasing SMAA) | Encuadre diagonal trasero en (3.5, 1.55, -5.1). Muestra el coche, el humo, las huellas y las sirenas. |
+| 2 | `Moon_Light` | Directional Light | Luz de luna azul pálido (0.72, 0.82, 1.0), intensidad 0.7, rasante (24°) para marcar el relieve de la nieve. |
+| 3 | `Snow_Terrain` | Plano subdividido (FBX) + MeshCollider | Suelo nevado de 60 × 60 m con ventisqueros alrededor del coche, huellas de neumáticos y textura de nieve. (1) |
+| 4 | `Police_Car` | Empty (objeto padre) | En **Y = -0.5**: el coche queda hundido y la nieve llega hasta las puertas. |
+| 5 | ↳ `Car_Mesh` | Modelo 3D (FBX) | Carrocería de la patrulla con capas de nieve en techo, capó y maletero. Las ruedas quedan ocultas bajo la nieve. |
+| 6 | ↳ `Siren_Pivot` | Empty + `SirenRotation.cs` | En el techo (0, 1.65, 0 local). Al girar, arrastra a sus dos luces hijas. |
+| 7 | ↳↳ `Red_Light` | Spot Light (+ Lens Flare SRP) | Roja, rango 22, sobre el lente rojo de la barra y apuntando a un lado. |
+| 8 | ↳↳ `Blue_Light` | Spot Light (+ Lens Flare SRP) | Azul, rango 22, sobre el lente azul y orientada al lado opuesto. |
+| 9 | ↳ `Exhaust_Smoke` | Particle System | Humo del tubo de escape, en la parte trasera del coche. |
+| 10 | `Global_Blizzard` | Particle System | Independiente: nieve cayendo sobre toda la escena. |
 
-### Fase 1. Proyecto base y escena vacía  →  Commit 1
-- [ ] Verificar que `.gitignore` ignora `Library/`, `Temp/`, `Logs/`, `UserSettings/`.
-- [ ] Guardar la escena como `Assets/Scenes/EscenaInvernal.unity` (o limpiar `SampleScene`) y dejarla vacía.
-- [ ] Enlazar el `origin` al repo con el nombre exigido y hacer push.
+(1) **Sobre `Snow_Terrain`:** el taller pide un *Plane* o un *Terrain*. Aquí se usa un plano, pero modelado en Blender: una cuadrícula de 200 × 200 segmentos, en vez del *Plane* de Unity, que tiene solo 10 × 10. Así el suelo puede tener relieve real: ventisqueros más altos del lado del viento, montículos alrededor de la patrulla y huellas de neumáticos. Cumple la misma función de suelo que pide el taller y refuerza el efecto de "coche enterrado" que se evalúa en la composición.
 
-Mensaje: `feat: configuracion inicial del proyecto y escena vacia`
+## Script `SirenRotation.cs`
 
-### Fase 2. Terreno nevado y coche enterrado  →  Commit 2
-- [ ] **Main Camera:** encuadre lateral/diagonal viendo el coche.
-- [ ] **Snow_Terrain:** Plane o Terrain con material blanco o de nieve. Crear `Assets/Materials/Snow.mat`.
-- [ ] **Police_Car:** Empty Object padre con **Y = -0.5 o menor**.
-- [ ] **Car_Mesh:** hijo de `Police_Car`.
-  - Opción A: modelo del `.blend` exportado a FBX en `Assets/Models/`.
-  - Opción B: Cubes y Cápsulas (carrocería + cabina).
-- [ ] Comprobar que las ruedas no se ven y que la nieve llega a las puertas. Ajustar Y hasta que se vea semienterrado.
+Está asignado **solo** a `Siren_Pivot`. La velocidad se ajusta desde el Inspector y el giro usa `Time.deltaTime`, así que no depende de los FPS.
 
-Mensaje: `feat: agregar terreno nevado y coche enterrado`
+```csharp
+public class SirenRotation : MonoBehaviour
+{
+    public float rotationSpeed = 360f;   // grados por segundo
 
-### Fase 3. Luces y sirenas (sin código)  →  Commit 3
-- [ ] **Moon_Light:** Directional Light, azul muy pálido, intensidad baja.
-- [ ] **Siren_Pivot:** Empty hijo de `Police_Car`, ubicado en el techo.
-- [ ] **Red_Light:** Point/Spot Light hijo de `Siren_Pivot`, rojo brillante, rango amplio.
-- [ ] **Blue_Light:** Point/Spot Light hijo de `Siren_Pivot`, azul brillante, en el lado **opuesto** a la roja.
-
-Mensaje: `feat: jerarquia de luces y sirenas de emergencia`
-
-### Fase 4. Script de rotación  →  Commit 4
-- [ ] Crear `Assets/Scripts/SirenRotation.cs`.
-- [ ] Variable pública `rotationSpeed` (visible en el Inspector).
-- [ ] En `Update()`: `transform.Rotate(0f, rotationSpeed * Time.deltaTime, 0f);`
-- [ ] Asignar el script **solo** a `Siren_Pivot`.
-- [ ] Probar en Play: las luces giran en círculo, sin errores en la consola.
-
-Mensaje: `feat: implementar script SirenRotation.cs`
-
-### Fase 5. Partículas  →  Commit 5
-- [ ] **Global_Blizzard** (independiente, no es hijo de nada):
-  - Shape: Box o Plane, alto sobre la escena, emitiendo hacia abajo.
-  - Gravedad moderada, velocidad inicial variable (Random Between Two Constants).
-  - Material de partícula por defecto o textura suave, con ligero tono azul claro.
-- [ ] **Exhaust_Smoke** (hijo de `Police_Car`, en la parte trasera):
-  - Shape: Cone muy estrecho.
-  - Color over Lifetime: gris oscuro a transparente.
-  - Size over Lifetime: creciente.
-  - Emisión baja o irregular para sugerir que el motor lucha por mantenerse encendido.
-
-Mensaje: `feat: integrar particulas de nieve y humo de escape`
-
-### Fase 6. Verificación final y entrega
-- [ ] La jerarquía tiene **exactamente 10 objetos** con los nombres y padres de la tabla de abajo.
-- [ ] Play sin errores en la consola. Capturas de la escena (Game view).
-- [ ] `git log --oneline` muestra al menos 5 commits con el formato pedido.
-- [ ] Repo público y sin `Library/` subida. Entregar el enlace de GitHub.
-
-## Jerarquía objetivo (exactamente 10 objetos)
-
-```
-Main Camera
-Moon_Light
-Snow_Terrain
-Police_Car              (Empty, Y <= -0.5)
-├── Car_Mesh
-├── Siren_Pivot         (script SirenRotation)
-│   ├── Red_Light
-│   └── Blue_Light
-└── Exhaust_Smoke       (Particle System)
-Global_Blizzard         (Particle System, independiente)
+    void Update()
+    {
+        transform.Rotate(0f, rotationSpeed * Time.deltaTime, 0f);
+    }
+}
 ```
 
-Cuidado: la rúbrica exige exactamente estos 10. No dejar objetos extra en la escena, como el `Directional Light` por defecto o un `Global Volume` que traiga la plantilla.
+Como `Red_Light` y `Blue_Light` son hijas del pivote, al rotarlo los dos haces de luz barren la nieve en círculo, como una sirena real. Cada luz tiene un componente *Lens Flare (SRP)*: cuando el haz apunta hacia la cámara, la barra destella con una pequeña estrella de su color.
 
-## Rúbrica
+## Sistemas de partículas
 
-| Criterio | Peso | Qué lo asegura |
-|---|---|---|
-| Jerarquía y composición | 30% | Fases 2, 3 y verificación de los 10 objetos; coche semienterrado |
-| Control de versiones | 30% | 5 commits atómicos con el formato exacto del PDF |
-| Scripting | 20% | `Time.deltaTime`, `rotationSpeed` pública, script solo en `Siren_Pivot` |
-| Partículas | 20% | Fase 5, ambos sistemas visibles en Play |
+**`Global_Blizzard` (nieve)**
 
-## Flujo de commits
+| Módulo | Configuración |
+|--------|---------------|
+| Shape | **Box** de 34 × 34 m a 12 m de altura, emitiendo hacia abajo |
+| Main | Velocidad inicial variable (0.8 – 2.5), gravedad moderada (0.12), vida de 5 a 7 s, tamaño 0.035 – 0.09 |
+| Emission | 8000 partículas/s, con prewarm para que nieve desde el primer frame |
+| Velocity over Lifetime | Viento lateral constante (X entre -3 y -1.6) |
+| Noise | Turbulencia suave (fuerza 0.6) |
+| Color | Copos de tono azul claro que aparecen y desaparecen suavemente |
+| Renderer | Stretched Billboard: los copos se estiran con el viento. Material *Particles/Simple Lit*: los copos que pasan cerca del coche se tiñen de rojo y azul con las sirenas |
 
-Un commit por fase, en orden, sin mezclar features. Los comandos de commit y push los ejecuta el dueño del repo. Al terminar cada fase se dan los comandos listos para copiar:
+**`Exhaust_Smoke` (escape del motor)**
+
+| Módulo | Configuración |
+|--------|---------------|
+| Shape | **Cone** muy estrecho (6°, radio 0.04) apuntando hacia atrás y un poco hacia arriba |
+| Emission | Curva que sube y baja, más una ráfaga (burst) en cada ciclo: el motor "tose" como si luchara contra el frío |
+| Color over Lifetime | **Gris oscuro → transparente** |
+| Size over Lifetime | **Tamaño creciente** (x0.5 → x3.4) |
+| Otros | Leve flotación, el mismo viento que la nieve y rotación aleatoria de cada bocanada. *Soft particles*: el humo se desvanece al tocar la nieve en vez de cortarse en línea recta |
+
+## Modelado y materiales
+
+- El coche y el terreno se modelaron desde cero en **Blender** y se exportaron a FBX (`Assets/Models`).
+  - La patrulla tiene esquema blanco y negro, ventanas con pilares, barra de luces, retrovisores, foco de búsqueda, antena, defensa delantera y el rótulo "POLICIA" atrás.
+  - El terreno tiene ventisqueros más altos del lado del viento y huellas de neumáticos detrás del coche.
+- Las texturas de la nieve (`Assets/Textures`) son procedurales y se repiten sin costuras: color, relieve de ondulaciones de viento, brillo con destellos de hielo y grano fino de detalle.
+- Los materiales del coche y la nieve usan el shader URP Lit; las luces de la barra, los faros y las luces traseras son emisivos.
+- La atmósfera es nocturna: niebla exponencial azul oscura, luz ambiental en degradado y reflejos del entorno atenuados.
+- Post-procesado (`Assets/Settings/SampleSceneProfile.asset`): gradación de color fría (White Balance y Color Adjustments), Bloom para el brillo de las sirenas, Tonemapping y viñeta. La luna proyecta sombras suaves en calidad alta (shadow map de 4096).
+
+## Estructura del proyecto
 
 ```
-git add -A
-git commit -m "feat: ..."
+Assets/
+├── Scenes/      EscenaInvernal.unity (la escena del taller)
+├── Scripts/     SirenRotation.cs
+├── Models/      Car_Mesh.fbx, Snow_Terrain.fbx
+├── Materials/   coche, nieve y partículas
+├── Textures/    texturas de nieve, copo y humo
+└── Settings/    configuración de URP, post-procesado y destello de las sirenas
+Docs/            capturas de este README
 ```
 
-## Decisiones abiertas
+## Historial de commits
 
-1. ¿Repo nuevo con el nombre `Unity-Taller-Invierno-[Apellido]`, o renombrar el actual? ¿Cuál es el apellido a usar?
-2. ¿El coche sale del `.blend` (FBX) o se arma con primitivas de Unity?
-3. ¿Se conserva el commit "Registro inicial" como base, o el commit 1 debe ser el de configuración?
+1. `feat: configuracion inicial del proyecto y escena vacia`
+2. `feat: agregar terreno nevado y coche enterrado`
+3. `feat: jerarquia de luces y sirenas de emergencia`
+4. `feat: implementar script SirenRotation.cs`
+5. `feat: integrar particulas de nieve y humo de escape`
+6. `docs: README con descripcion de la escena y capturas`
+
+## Herramientas
+
+Unity 6000.3 (URP), Blender 5.2 y Git / GitHub con Git LFS. Como permite el taller, se usó un asistente de IA (Claude) como apoyo para los scripts y los parámetros de las partículas.
